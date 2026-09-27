@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FaceFilter AI — Real-Time Face Detection & Filters</title>
+  <meta name="description" content="AI-powered face detection with real-time filters, photo capture and video recording. Built with Python OpenCV and Flask." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+
+  <!-- ── Animated background ── -->
+  <div class="bg-orbs" aria-hidden="true">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+  </div>
+
+  <!-- ── Header ── -->
+  <header class="header">
+    <div class="logo">
+      <span class="logo-icon">🎭</span>
+      <span class="logo-text">FaceFilter <span class="logo-ai">AI</span></span>
+    </div>
+    <div class="status-bar" id="statusBar">
+      <span class="status-dot" id="statusDot"></span>
+      <span id="statusText">Connecting…</span>
+    </div>
+  </header>
+
+  <!-- ── Main layout ── -->
+  <main class="main-layout">
+
+    <!-- ── Video feed ── -->
+    <section class="video-section">
+      <div class="video-frame" id="videoFrame">
+        <div class="video-scanline"></div>
+        <!-- Hidden: browser webcam capture -->
+        <video id="webcamVideo" autoplay playsinline muted style="display:none;"></video>
+        <!-- Hidden: canvas to grab raw frames from webcam -->
+        <canvas id="captureCanvas" style="display:none;"></canvas>
+        <!-- Visible: displays processed frames from server -->
+        <img
+          id="processedFeed"
+          alt="Live camera feed with face detection"
+          class="video-img"
+        />
+        <!-- HUD overlays -->
+        <div class="hud-corner hud-tl"></div>
+        <div class="hud-corner hud-tr"></div>
+        <div class="hud-corner hud-bl"></div>
+        <div class="hud-corner hud-br"></div>
+        <div class="face-badge" id="faceBadge">
+          <span class="face-icon">👤</span>
+          <span id="faceCount">0</span> face(s)
+        </div>
+        <div class="active-filter-badge" id="activeFilterBadge">NONE</div>
+      </div>
+
+      <!-- ── Action buttons ── -->
+      <div class="action-buttons">
+        <button class="btn btn-capture" id="btnCapture" title="Take photo (Space)">
+          <span class="btn-icon">📸</span>
+          <span class="btn-label">Capture Photo</span>
+        </button>
+        <button class="btn btn-record" id="btnRecord" title="Record video (R)">
+          <span class="btn-icon">🔴</span>
+          <span class="btn-label">Record Video</span>
+        </button>
+        <button class="btn btn-reset" id="btnReset" title="Remove filter (Esc)">
+          <span class="btn-icon">✕</span>
+          <span class="btn-label">No Filter</span>
+        </button>
+      </div>
+
+      <!-- Recording timer -->
+      <div class="record-timer" id="recordTimer" style="display:none;">
+        <span class="rec-dot"></span> REC <span id="recTime">00:00</span>
+      </div>
+    </section>
+
+    <!-- ── Filter panel ── -->
+    <aside class="filter-panel">
+      <h2 class="panel-title">
+        <span>🌟</span> Choose Filter
+      </h2>
+      <p class="panel-subtitle">Click a filter to apply it live</p>
+
+      <div class="filter-grid" id="filterGrid">
+
+        <button class="filter-card active" data-filter="none" id="filter-none">
+          <div class="filter-preview">🎯</div>
+          <div class="filter-name">Detect Only</div>
+          <div class="filter-desc">Face boxes only</div>
+        </button>
+
+        <button class="filter-card" data-filter="dog" id="filter-dog">
+          <div class="filter-preview">🐶</div>
+          <div class="filter-name">Dog</div>
+          <div class="filter-desc">Ears, nose & tongue</div>
+        </button>
+
+        <button class="filter-card" data-filter="sunglasses" id="filter-sunglasses">
+          <div class="filter-preview">😎</div>
+          <div class="filter-name">Sunglasses</div>
+          <div class="filter-desc">Cool shades overlay</div>
+        </button>
+
+        <button class="filter-card" data-filter="crown" id="filter-crown">
+          <div class="filter-preview">👑</div>
+          <div class="filter-name">Crown</div>
+          <div class="filter-desc">Golden royal crown</div>
+        </button>
+
+        <button class="filter-card" data-filter="rainbow" id="filter-rainbow">
+          <div class="filter-preview">🌈</div>
+          <div class="filter-name">Rainbow</div>
+          <div class="filter-desc">Animated arc colors</div>
+        </button>
+
+        <button class="filter-card" data-filter="neon" id="filter-neon">
+          <div class="filter-preview">⚡</div>
+          <div class="filter-name">Neon</div>
+          <div class="filter-desc">Glowing edge effect</div>
+        </button>
+
+        <button class="filter-card" data-filter="vintage" id="filter-vintage">
+          <div class="filter-preview">📷</div>
+          <div class="filter-name">Vintage</div>
+          <div class="filter-desc">Sepia + film grain</div>
+        </button>
+
+        <button class="filter-card" data-filter="cyberpunk" id="filter-cyberpunk">
+          <div class="filter-preview">🤖</div>
+          <div class="filter-name">Cyberpunk</div>
+          <div class="filter-desc">HUD + scanlines</div>
+        </button>
+
+        <button class="filter-card" data-filter="mirror" id="filter-mirror">
+          <div class="filter-preview">🪞</div>
+          <div class="filter-name">Mirror</div>
+          <div class="filter-desc">Split mirror screen</div>
+        </button>
+
+        <button class="filter-card" data-filter="sketch" id="filter-sketch">
+          <div class="filter-preview">✏️</div>
+          <div class="filter-name">Sketch</div>
+          <div class="filter-desc">Pencil drawing look</div>
+        </button>
+
+        <button class="filter-card" data-filter="pixelate" id="filter-pixelate">
+          <div class="filter-preview">🎮</div>
+          <div class="filter-name">Pixelate</div>
+          <div class="filter-desc">8-bit pixel face</div>
+        </button>
+
+        <button class="filter-card" data-filter="glitch" id="filter-glitch">
+          <div class="filter-preview">📺</div>
+          <div class="filter-name">Glitch</div>
+          <div class="filter-desc">RGB split + scan bars</div>
+        </button>
+
+        <button class="filter-card" data-filter="thermal" id="filter-thermal">
+          <div class="filter-preview">🌡️</div>
+          <div class="filter-name">Thermal</div>
+          <div class="filter-desc">Heat map vision</div>
+        </button>
+
+        <button class="filter-card" data-filter="nightvision" id="filter-nightvision">
+          <div class="filter-preview">🔫</div>
+          <div class="filter-name">Night Vision</div>
+          <div class="filter-desc">Green scope + grain</div>
+        </button>
+
+        <button class="filter-card" data-filter="cartoon" id="filter-cartoon">
+          <div class="filter-preview">🖌️</div>
+          <div class="filter-name">Cartoon</div>
+          <div class="filter-desc">Smooth paint + edges</div>
+        </button>
+
+        <button class="filter-card" data-filter="fisheye" id="filter-fisheye">
+          <div class="filter-preview">🐡</div>
+          <div class="filter-name">Fisheye</div>
+          <div class="filter-desc">Barrel warp on face</div>
+        </button>
+
+        <button class="filter-card" data-filter="disco" id="filter-disco">
+          <div class="filter-preview">🪩</div>
+          <div class="filter-name">Disco</div>
+          <div class="filter-desc">Party strobe lights</div>
+        </button>
+
+      </div>
+
+      <!-- ── Keyboard shortcuts ── -->
+      <div class="shortcuts">
+        <div class="shortcut-title">⌨️ Shortcuts</div>
+        <div class="shortcut-row"><kbd>Space</kbd> Capture photo</div>
+        <div class="shortcut-row"><kbd>R</kbd> Record video</div>
+        <div class="shortcut-row"><kbd>Esc</kbd> Remove filter</div>
+        <div class="shortcut-row"><kbd>1–9</kbd> Select filter</div>
+      </div>
+    </aside>
+
+  </main>
+
+  <!-- ── Gallery ── -->
+  <section class="gallery-section" id="gallerySection">
+    <h2 class="gallery-title">📁 Captured Photos</h2>
+    <div class="gallery-grid" id="galleryGrid">
+      <p class="gallery-empty" id="galleryEmpty">No photos captured yet — click 📸 to start!</p>
+    </div>
+  </section>
+
+  <!-- ── Toast notification ── -->
+  <div class="toast" id="toast"></div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
